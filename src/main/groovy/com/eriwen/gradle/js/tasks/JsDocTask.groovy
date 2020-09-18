@@ -17,6 +17,7 @@ package com.eriwen.gradle.js.tasks
 
 import com.eriwen.gradle.js.ResourceUtil
 import com.eriwen.gradle.js.RhinoExec
+import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.SourceTask
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
@@ -28,8 +29,8 @@ class JsDocTask extends SourceTask {
     private static final ResourceUtil RESOURCE_UTIL = new ResourceUtil()
     private final RhinoExec rhino = new RhinoExec(project)
 
-    Iterable<String> modulePaths = ['lib', 'node_modules', 'rhino', '.']
-    Boolean debug = false
+    @Input Iterable<String> modulePaths = ['lib', 'node_modules', 'rhino', '.']
+    @Input Boolean debug = false
 
     @OutputDirectory def destinationDir
 

@@ -1,12 +1,12 @@
 plugins {
-    id 'com.gradle.build-scan' version '2.0.2'
-    id "com.gradle.plugin-publish" version "0.9.4"
+    id "com.gradle.plugin-publish" version "0.12.0"
+    id "java-gradle-plugin"
     id "com.jfrog.bintray" version "1.6"
 }
 apply plugin: 'groovy'
 apply plugin: 'maven'
 apply plugin: 'maven-publish'
-apply plugin: 'signing'
+//apply plugin: 'signing'
 apply plugin: 'jacoco'
 apply plugin: 'project-report'
 
@@ -15,15 +15,10 @@ targetCompatibility = 1.6
 
 defaultTasks 'clean', 'build'
 
-version = '2.14.1'
-group = 'com.eriwen'
+version = '2.16.1'
+group = 'com.cloudzilla.gradle'
 ext.archivesBaseName = 'gradle-js-plugin'
 ext.isSnapshot = version.endsWith("-SNAPSHOT")
-
-buildScan {
-    termsOfServiceUrl = 'https://gradle.com/terms-of-service'
-    termsOfServiceAgree = 'yes'
-}
 
 repositories {
     jcenter()
@@ -98,26 +93,32 @@ publishing {
     }
 }
 
+gradlePlugin {
+    plugins {
+        jsPlugin {
+            id = 'com.cloudzilla.gradle.js'
+            implementationClass = 'com.eriwen.gradle.js.JsPlugin'
+        }
+    }
+}
+
+
 pluginBundle {
-    website = 'https://github.com/eriwen/gradle-js-plugin/'
-    vcsUrl = 'https://github.com/eriwen/gradle-js-plugin/'
+    website = 'https://github.com/mampcs/gradle-js-plugin/'
+    vcsUrl = 'https://github.com/mampcs/gradle-js-plugin/'
     description = 'Gradle plugin for working with JS'
     tags = ['javascript', 'jshint', 'requirejs']
 
     plugins {
         jsPlugin {
-            id = 'com.eriwen.gradle.js'
+            id = 'com.cloudzilla.gradle.js'
             displayName = 'Gradle JavaScript Plugin'
         }
     }
     mavenCoordinates {
-        groupId = 'com.eriwen'
+        groupId = 'com.cloudzilla.gradle'
         artifactId = 'gradle-js-plugin'
     }
-}
-
-signing {
-    sign configurations.archives
 }
 
 bintray {
@@ -142,58 +143,12 @@ test {
     }
 }
 
-jacoco {
-    toolVersion = "0.7.6.201602180812"
-    reportsDir = file("$buildDir/customJacocoReportDir")
-}
-
-jacocoTestReport {
-    reports {
-        xml.enabled false
-        csv.enabled false
-        html.destination file("${buildDir}/jacocoHtml")
-    }
-}
-
-jacocoTestCoverageVerification {
-    violationRules {
-        rule {
-            element = 'PACKAGE'
-            includes = ['com.eriwen.gradle.*']
-
-            limit {
-                counter = 'LINE'
-                value = 'COVEREDRATIO'
-                minimum = 0.6
-            }
-            limit {
-                counter = 'CLASS'
-                value = 'MISSEDCOUNT'
-                maximum = 0
-            }
-        }
-    }
-}
-
-// Only *require* signing if we are uploading a non snapshot version
-gradle.taskGraph.whenReady { taskGraph ->
-    tasks.withType(org.gradle.plugins.signing.Sign).all {
-        required = taskGraph.hasTask(":uploadArchives") && !isSnapshot
-    }
-}
-
 install.repositories.mavenInstaller {
     pom.project(pomConfiguration)
-    if (signing.signatory) {
-        beforeDeployment { signing.signPom(it) }
-    }
 }
 
 uploadArchives {
     repositories.mavenDeployer {
-        if (signing.signatory) {
-            beforeDeployment { signing.signPom(it) }
-        }
         name = 'mavenCentralReleaseDeployer'
         repository(url: 'https://oss.sonatype.org/service/local/staging/deploy/maven2/') {
             authentication(userName: System.properties['mavenCentralUsername'], password: System.properties['mavenCentralPassword'])
@@ -228,9 +183,9 @@ def getPomConfiguration() {
             }
         }
         scm {
-            connection 'scm:https://eriwen@github.com/eriwen/gradle-js-plugin'
-            developerConnection 'scm:git@github.com:eriwen/gradle-js-plugin.git'
-            url 'https://github.com/eriwen/gradle-js-plugin'
+            connection 'scm:https://mampcs@github.com/mampcs/gradle-js-plugin'
+            developerConnection 'scm:git@github.com:mampcs/gradle-js-plugin.git'
+            url 'https://github.com/mampcs/gradle-js-plugin'
         }
     }
 }
