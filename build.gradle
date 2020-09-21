@@ -15,7 +15,7 @@ targetCompatibility = 1.6
 
 defaultTasks 'clean', 'build'
 
-version = '2.16.1'
+version = '2.16.2'
 group = 'com.cloudzilla.gradle'
 ext.archivesBaseName = 'gradle-js-plugin'
 ext.isSnapshot = version.endsWith("-SNAPSHOT")
@@ -38,7 +38,7 @@ task createClasspathManifest {
 
 dependencies {
     compile gradleApi()
-    compile('com.google.javascript:closure-compiler:v20160208') {
+    compile('com.google.javascript:closure-compiler:v20200830') {
         exclude module: 'junit'
     }
     compile('io.jdev.html2js:html2js:0.1') {

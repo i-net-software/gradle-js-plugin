@@ -9,7 +9,7 @@ Wrangling your JS in a [Gradle](https://gradle.org) build is easy! Just add this
 ### Gradle 2.1+
 ```groovy
 plugins {
-  id "com.cloudzilla.gradle.js" version "2.16.1"
+  id "com.cloudzilla.gradle.js" version "2.16.2"
 }
 ```
 
