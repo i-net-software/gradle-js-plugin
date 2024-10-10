@@ -8,3 +8,4 @@ out/
 .idea/
 intellij
 gradle.properties
+/.DS_Store
