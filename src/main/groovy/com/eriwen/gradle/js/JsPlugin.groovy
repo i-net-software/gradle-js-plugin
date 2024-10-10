@@ -67,7 +67,7 @@ class JsPlugin implements Plugin<Project> {
             rhino
         }
         project.dependencies {
-            rhino 'org.mozilla:rhino:1.7R3'
+            rhino 'org.mozilla:rhino:1.7.15'
         }
         // TODO: have 'check' depend on jshint
     }

@@ -13,7 +13,7 @@ configurations {
 }
 
 dependencies {
-    rhino 'org.mozilla:rhino:1.7R3'
+    rhino 'org.mozilla:rhino:1.7.15'
 }
 
 apply plugin: 'js'
