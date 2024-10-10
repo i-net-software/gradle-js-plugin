@@ -1,22 +1,20 @@
 plugins {
     id "com.gradle.plugin-publish" version "0.12.0"
     id "java-gradle-plugin"
-    id "com.jfrog.bintray" version "1.6"
 }
+
 apply plugin: 'groovy'
-apply plugin: 'maven'
 apply plugin: 'maven-publish'
-//apply plugin: 'signing'
 apply plugin: 'jacoco'
 apply plugin: 'project-report'
 
-sourceCompatibility = 1.6
-targetCompatibility = 1.6
+sourceCompatibility = 11
+targetCompatibility = 11
 
 defaultTasks 'clean', 'build'
 
-version = '2.16.2'
-group = 'com.cloudzilla.gradle'
+version = '2.17.0'
+group = 'de.inetsoftware.gradle'
 ext.archivesBaseName = 'gradle-js-plugin'
 ext.isSnapshot = version.endsWith("-SNAPSHOT")
 
@@ -38,7 +36,7 @@ task createClasspathManifest {
 
 dependencies {
     compile gradleApi()
-    compile('com.google.javascript:closure-compiler:v20200830') {
+    compile('com.google.javascript:closure-compiler:v20240317') {
         exclude module: 'junit'
     }
     compile('io.jdev.html2js:html2js:0.1') {
@@ -111,26 +109,13 @@ pluginBundle {
 
     plugins {
         jsPlugin {
-            id = 'com.cloudzilla.gradle.js'
+            id = 'de.inetsoftware.gradle.js'
             displayName = 'Gradle JavaScript Plugin'
         }
     }
     mavenCoordinates {
-        groupId = 'com.cloudzilla.gradle'
+        groupId = 'de.inetsoftware.gradle'
         artifactId = 'gradle-js-plugin'
-    }
-}
-
-bintray {
-    user = System.properties['bintrayUsername']
-    key = System.properties['bintrayApiKey']
-    publications = ['maven']
-    pkg {
-        repo = 'gradle-plugins'
-        name = 'gradle-js-plugin'
-        desc = 'Gradle plugin for working with JS.'
-        licenses = ['Apache-2.0']
-        labels = ['gradle', 'js']
     }
 }
 
@@ -143,22 +128,6 @@ test {
     }
 }
 
-install.repositories.mavenInstaller {
-    pom.project(pomConfiguration)
-}
-
-uploadArchives {
-    repositories.mavenDeployer {
-        name = 'mavenCentralReleaseDeployer'
-        repository(url: 'https://oss.sonatype.org/service/local/staging/deploy/maven2/') {
-            authentication(userName: System.properties['mavenCentralUsername'], password: System.properties['mavenCentralPassword'])
-            releases(updatePolicy: 'always')
-            snapshots(updatePolicy: 'always')
-        }
-        pom.project(pomConfiguration)
-    }
-}
-
 /**
  * Create POM config and return for use by other tasks.
  */
@@ -167,7 +136,7 @@ def getPomConfiguration() {
         name 'Gradle JS Plugin'
         packaging 'jar'
         description 'A Gradle plugin for working with JS.'
-        url 'https://github.com/eriwen/gradle-js-plugin'
+        url 'https://github.com/i-net-software/gradle-js-plugin'
         licenses {
             license {
                 name 'The Apache Software License, Version 2.0'
@@ -181,11 +150,16 @@ def getPomConfiguration() {
                 name 'Eric Wendelin'
                 email 'me@eriwen.com'
             }
+            developer {
+                id 'inetsoftware'
+                name 'i-net software GmbH'
+                email 'contact@inetsoftware.de'
+            }
         }
         scm {
-            connection 'scm:https://mampcs@github.com/mampcs/gradle-js-plugin'
-            developerConnection 'scm:git@github.com:mampcs/gradle-js-plugin.git'
-            url 'https://github.com/mampcs/gradle-js-plugin'
+            connection 'scm:https://gamma@github.com/i-net-software/gradle-js-plugin'
+            developerConnection 'scm:git@github.com/i-net-software/gradle-js-plugin.git'
+            url 'http://github.com/i-net-software/gradle-js-plugin'
         }
     }
 }
