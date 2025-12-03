@@ -20,8 +20,16 @@ import org.gradle.api.GradleException
 import org.gradle.api.tasks.SourceTask
 import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.OutputFile
+import org.gradle.api.tasks.util.internal.PatternSetFactory
+import javax.inject.Inject
 
 class Props2JsTask extends SourceTask {
+    @Inject
+    private PatternSetFactory patternSetFactory
+    
+    protected PatternSetFactory getPatternSetFactory() {
+        return patternSetFactory
+    }
     private static final String PROPS2JS_JAR = 'props2js-0.1.0.jar'
     private static final String TMP_DIR = "tmp${File.separator}js"
     private static final ResourceUtil RESOURCE_UTIL = new ResourceUtil()

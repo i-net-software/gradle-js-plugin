@@ -18,11 +18,19 @@ package com.eriwen.gradle.js.tasks
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.SourceTask
 import org.gradle.api.tasks.TaskAction
+import org.gradle.api.tasks.util.internal.PatternSetFactory
+import javax.inject.Inject
 import java.util.zip.GZIPOutputStream
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 
 class GzipJsTask extends SourceTask {
+    @Inject
+    private PatternSetFactory patternSetFactory
+    
+    protected PatternSetFactory getPatternSetFactory() {
+        return patternSetFactory
+    }
     @OutputFile def dest
 
     File getDest() {

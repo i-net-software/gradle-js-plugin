@@ -20,9 +20,17 @@ import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.SourceTask
 import org.gradle.api.tasks.OutputFile
+import org.gradle.api.tasks.util.internal.PatternSetFactory
 import org.gradle.api.GradleException
+import javax.inject.Inject
 
 class JsHintTask extends SourceTask {
+    @Inject
+    private PatternSetFactory patternSetFactory
+    
+    protected PatternSetFactory getPatternSetFactory() {
+        return patternSetFactory
+    }
     @OutputFile def dest = new File(project.buildDir, "jshint.log")
     @Input def ignoreExitCode = true
     @Input def outputToStdOut = false

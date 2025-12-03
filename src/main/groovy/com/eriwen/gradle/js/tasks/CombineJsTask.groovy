@@ -19,8 +19,17 @@ import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.SourceTask
+import org.gradle.api.tasks.util.internal.PatternSetFactory
+import javax.inject.Inject
 
 class CombineJsTask extends SourceTask {
+    @Inject
+    private PatternSetFactory patternSetFactory
+    
+    protected PatternSetFactory getPatternSetFactory() {
+        return patternSetFactory
+    }
+    
     @OutputFile def dest
 
     @Input encoding = System.properties['file.encoding']

@@ -22,8 +22,16 @@ import org.gradle.api.tasks.TaskAction
 import com.eriwen.gradle.js.ResourceUtil
 import org.gradle.api.tasks.SourceTask
 import org.gradle.api.tasks.OutputFile
+import org.gradle.api.tasks.util.internal.PatternSetFactory
+import javax.inject.Inject
 
 class RequireJsTask extends SourceTask {
+    @Inject
+    private PatternSetFactory patternSetFactory
+    
+    protected PatternSetFactory getPatternSetFactory() {
+        return patternSetFactory
+    }
     private static final String REQUIREJS_PATH = 'r.js'
     private static final String TMP_DIR = "tmp${File.separator}js"
     private static final ResourceUtil RESOURCE_UTIL = new ResourceUtil()
