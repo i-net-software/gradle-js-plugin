@@ -31,10 +31,19 @@ class CombineJsTask extends SourceTask {
 
     @TaskAction
     def run() { 
-        ant.concat(destfile: (dest as File).canonicalPath, fixlastline: 'yes', encoding: encoding) {
-            source.files.each {
-                logger.info("Adding to fileset: ${it}")
-                fileset(file: it)
+        final File destFile = getDest()
+        destFile.parentFile.mkdirs()
+        
+        destFile.withWriter(encoding) { writer ->
+            source.files.each { sourceFile ->
+                logger.info("Adding to fileset: ${sourceFile}")
+                sourceFile.withReader(encoding) { reader ->
+                    writer << reader
+                }
+                // Add newline if file doesn't end with one (fixlastline: 'yes' equivalent)
+                if (!sourceFile.text.endsWith('\n') && !sourceFile.text.endsWith('\r')) {
+                    writer.write('\n')
+                }
             }
         }
     }

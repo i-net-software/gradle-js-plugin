@@ -18,6 +18,9 @@ package com.eriwen.gradle.js.tasks
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.SourceTask
 import org.gradle.api.tasks.TaskAction
+import java.util.zip.GZIPOutputStream
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
 
 class GzipJsTask extends SourceTask {
     @OutputFile def dest
@@ -28,8 +31,28 @@ class GzipJsTask extends SourceTask {
 
     @TaskAction
     def run() {
-        final String srcPath = source.singleFile.canonicalPath
-        ant.gzip(src: srcPath, destfile: "${srcPath}.gz")
-        ant.move(file: "${srcPath}.gz", tofile: (dest as File).canonicalPath)
+        final File srcFile = source.singleFile
+        final File destFile = getDest()
+        final File tempGzFile = new File(srcFile.parentFile, "${srcFile.name}.gz")
+        
+        // Gzip the source file
+        srcFile.withInputStream { inputStream ->
+            tempGzFile.withOutputStream { outputStream ->
+                GZIPOutputStream gzipOutputStream = new GZIPOutputStream(outputStream)
+                try {
+                    byte[] buffer = new byte[8192]
+                    int len
+                    while ((len = inputStream.read(buffer)) != -1) {
+                        gzipOutputStream.write(buffer, 0, len)
+                    }
+                } finally {
+                    gzipOutputStream.close()
+                }
+            }
+        }
+        
+        // Move the gzipped file to destination
+        destFile.parentFile.mkdirs()
+        Files.move(tempGzFile.toPath(), destFile.toPath(), StandardCopyOption.REPLACE_EXISTING)
     }
 }

@@ -15,6 +15,10 @@
  */
 package com.eriwen.gradle.js
 
+import java.util.zip.ZipInputStream
+import java.util.zip.ZipEntry
+import java.io.FileInputStream
+
 /**
  * Operations to handle zip files and other resources on the classpath.
  *
@@ -53,10 +57,31 @@ class ResourceUtil {
     File extractZipFile(final File zipFile) {
         final String extractTargetPath = zipFile.canonicalPath.substring(0, zipFile.canonicalPath.length() - 4);
         final File zipTargetDir = new File(extractTargetPath)
-        zipTargetDir.mkdir()
+        zipTargetDir.mkdirs()
 
-        // TODO: quiet this noise
-        new AntBuilder().unzip(src: zipFile.canonicalPath, dest: extractTargetPath, overwrite: 'true')
+        ZipInputStream zipInputStream = new ZipInputStream(new FileInputStream(zipFile))
+        try {
+            ZipEntry entry = zipInputStream.getNextEntry()
+            while (entry != null) {
+                final File entryFile = new File(zipTargetDir, entry.getName())
+                if (entry.isDirectory()) {
+                    entryFile.mkdirs()
+                } else {
+                    entryFile.getParentFile().mkdirs()
+                    entryFile.withOutputStream { outputStream ->
+                        byte[] buffer = new byte[8192]
+                        int len
+                        while ((len = zipInputStream.read(buffer)) != -1) {
+                            outputStream.write(buffer, 0, len)
+                        }
+                    }
+                }
+                zipInputStream.closeEntry()
+                entry = zipInputStream.getNextEntry()
+            }
+        } finally {
+            zipInputStream.close()
+        }
 
         return zipTargetDir
     }

@@ -16,18 +16,17 @@
 package com.eriwen.gradle.js.tasks
 
 import com.eriwen.gradle.js.ResourceUtil
-import com.eriwen.gradle.js.RhinoExec
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.SourceTask
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
+import org.gradle.process.JavaExecSpec
 
 class JsDocTask extends SourceTask {
     private static final String JSDOC_NAME = 'jsdoc-releases-3.3'
     private static final String JSDOC_PATH = "${JSDOC_NAME}.zip"
     private static final String TMP_DIR = "tmp${File.separator}js"
     private static final ResourceUtil RESOURCE_UTIL = new ResourceUtil()
-    private final RhinoExec rhino = new RhinoExec(project)
 
     @Input Iterable<String> modulePaths = ['lib', 'node_modules', 'rhino', '.']
     @Input Boolean debug = false
@@ -56,7 +55,12 @@ class JsDocTask extends SourceTask {
         args.addAll(['-d', (destinationDir as File).absolutePath])
         args.addAll(project.jsdoc.options.collect { it })
 
-        rhino.execute(args, [workingDir: workingDir, classpath: project.files("${workingDir}${File.separator}rhino${File.separator}js.jar")])
+        project.javaexec { JavaExecSpec spec ->
+            spec.classpath = project.files("${workingDir}${File.separator}rhino${File.separator}js.jar")
+            spec.workingDir = new File(workingDir)
+            spec.main = 'org.mozilla.javascript.tools.shell.Main'
+            spec.args = args
+        }
     }
 
     // Cannot for the life of me figure out why Thread.currentThread().contextClassLoader no longer works for loading jsdoc.zip
