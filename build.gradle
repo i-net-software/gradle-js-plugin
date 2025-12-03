@@ -1,22 +1,30 @@
 plugins {
-    id "com.gradle.plugin-publish" version "0.12.0"
-    id "java-gradle-plugin"
+    id 'java-gradle-plugin'
+    id 'com.gradle.plugin-publish' version '1.2.1' // Updated for Gradle 9 compatibility
+    id 'signing' // Required for Maven Central
+    id 'io.github.gradle-nexus.publish-plugin' version '2.0.0' // Automates Sonatype Nexus publishing
 }
 
 apply plugin: 'groovy'
 apply plugin: 'maven-publish'
-apply plugin: 'jacoco'
-apply plugin: 'project-report'
+apply plugin: 'java'
 
-sourceCompatibility = 11
-targetCompatibility = 11
+java {
+    sourceCompatibility = JavaVersion.VERSION_11
+    targetCompatibility = JavaVersion.VERSION_11
+}
+
+// Configure processResources to handle duplicate plugin descriptor files
+// java-gradle-plugin generates them, but we also have them in source for consistency
+processResources {
+    duplicatesStrategy = DuplicatesStrategy.INCLUDE
+}
 
 defaultTasks 'clean', 'build'
 
-version = '2.18.0'
 group = 'de.inetsoftware.gradle'
 ext.archivesBaseName = 'gradle-js-plugin'
-ext.isSnapshot = version.endsWith("-SNAPSHOT")
+ext.isSnapshot = project.version.toString().endsWith("-SNAPSHOT")
 
 repositories {
     mavenCentral()
@@ -36,16 +44,34 @@ task createClasspathManifest {
 
 dependencies {
     implementation gradleApi()
+    implementation localGroovy()
     implementation('com.google.javascript:closure-compiler:v20250407') {
         exclude module: 'junit'
     }
     implementation('io.jdev.html2js:html2js:0.1') {
         exclude module: 'groovy-all'
     }
+    
+    // JUnit 4 for JUnit-based tests
+    testImplementation 'junit:junit:4.13.2'
+    // Groovy test support - use same version as Gradle's bundled Groovy
+    testImplementation localGroovy()
     testImplementation gradleTestKit()
     testImplementation files(createClasspathManifest)
-    testImplementation('org.spockframework:spock-core:2.3-groovy-3.0')
-    testImplementation 'junit:junit:4.13.2'
+    
+    // Spock version selection based on Gradle version:
+    // - Gradle 8.x uses Groovy 3.0.x -> Spock 2.3-groovy-3.0
+    // - Gradle 9.x uses Groovy 4.0.x -> Spock 2.3-groovy-4.0
+    def spockVersion = project.gradle.gradleVersion.startsWith('9.') 
+        ? '2.3-groovy-4.0' 
+        : '2.3-groovy-3.0'
+    testImplementation "org.spockframework:spock-core:${spockVersion}"
+    
+    // JUnit 5 for JUnit Platform tests (if any)
+    testImplementation(platform('org.junit:junit-bom:5.10.1'))
+    testImplementation('org.junit.jupiter:junit-jupiter')
+    testRuntimeOnly('org.junit.platform:junit-platform-launcher') // Required for Gradle 9+
+    
     testImplementation 'commons-lang:commons-lang:2.6'
 }
 
@@ -70,48 +96,70 @@ artifacts {
 }
 
 publishing {
-    publications {
-        maven(MavenPublication) {
-            if (plugins.hasPlugin('war')) {
-                from components.web
-            } else {
-                from components.java
-            }
+    repositories {
+        mavenLocal()
+    }
+}
 
-            artifact sourceJar
-            artifact groovydocJar
+// Configure Nexus Publish Plugin for Sonatype/Maven Central
+nexusPublishing {
+    repositories {
+        sonatype {
+            // New Central Portal URLs
+            nexusUrl.set(uri("https://ossrh-staging-api.central.sonatype.com/service/local/"))
+            snapshotRepositoryUrl.set(uri("https://central.sonatype.com/repository/maven-snapshots/"))
+            // Credentials - try both property name variations
+            username.set(
+                project.findProperty('ossrhUsername') 
+                    ?: project.findProperty('sonatypeUsername')
+                    ?: System.getenv('SONATYPE_USERNAME') 
+                    ?: System.getenv('OSSRH_USERNAME')
+                    ?: ""
+            )
+            password.set(
+                project.findProperty('ossrhPassword')
+                    ?: project.findProperty('sonatypePassword')
+                    ?: System.getenv('SONATYPE_PASSWORD')
+                    ?: System.getenv('OSSRH_PASSWORD')
+                    ?: ""
+            )
+            // Staging profile ID - should be the UUID from Sonatype, not the domain
+            // Get it from: https://central.sonatype.com/ -> Staging Profiles
+            // Or leave it out to auto-detect by groupId
+            // If you have a staging profile UUID, uncomment and set it:
+            // stagingProfileId.set('xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx')
         }
     }
+}
+
+closeStagingRepositories {
+    closeStagingRepositories.dependsOn 'publishToSonatype'
+    publish.finalizedBy 'closeStagingRepositories'
+}
+
+// Configure signing for Maven Central
+signing {
+    useInMemoryPgpKeys( project.findProperty('signing.key'), project.findProperty('signing.password') )
+    sign publishing.publications
 }
 
 gradlePlugin {
-    plugins {
-        jsPlugin {
-            id = 'com.cloudzilla.gradle.js'
-            implementationClass = 'com.eriwen.gradle.js.JsPlugin'
-        }
-    }
-}
-
-pluginBundle {
-    website = 'https://github.com/mampcs/gradle-js-plugin/'
-    vcsUrl = 'https://github.com/mampcs/gradle-js-plugin/'
-    description = 'Gradle plugin for working with JS'
-    tags = ['javascript', 'jshint', 'requirejs']
-
+    website = 'https://github.com/i-net-software/gradle-js-plugin'
+    vcsUrl = 'https://github.com/i-net-software/gradle-js-plugin'
+    
     plugins {
         jsPlugin {
             id = 'de.inetsoftware.gradle.js'
+            implementationClass = 'com.eriwen.gradle.js.JsPlugin'
             displayName = 'Gradle JavaScript Plugin'
+            description = 'Gradle plugin for working with JavaScript, JSDoc, JSHint, and RequireJS.'
+            tags.set(['javascript', 'js', 'jsdoc', 'jshint', 'requirejs', 'closure-compiler'])
         }
-    }
-    mavenCoordinates {
-        groupId = 'de.inetsoftware.gradle'
-        artifactId = 'gradle-js-plugin'
     }
 }
 
 test {
+    useJUnitPlatform()
     systemProperties['version'] = version
     testLogging {
         stackTraceFilters 'truncate', 'groovy'
@@ -120,46 +168,50 @@ test {
     }
 }
 
-/**
- * Create POM config and return for use by other tasks.
- */
-def getPomConfiguration() {
-    return {
-        name 'Gradle JS Plugin'
-        packaging 'jar'
-        description 'A Gradle plugin for working with JS.'
-        url 'https://github.com/i-net-software/gradle-js-plugin'
-        licenses {
-            license {
-                name 'The Apache Software License, Version 2.0'
-                url 'http://www.apache.org/licenses/LICENSE-2.0.txt'
-                distribution 'repo'
-            }
+// Configure POM metadata for Maven Central (if publishing there)
+// The java-gradle-plugin automatically creates publications, configure them via afterEvaluate
+afterEvaluate {
+    // For snapshots, skip sources and javadoc tasks to minimize published artifacts
+    if (project.version.toString().endsWith('-SNAPSHOT')) {
+        tasks.named('sourcesJar').configure {
+            enabled = false
         }
-        developers {
-            developer {
-                id 'eriwen'
-                name 'Eric Wendelin'
-                email 'me@eriwen.com'
-            }
-            developer {
-                id 'inetsoftware'
-                name 'i-net software GmbH'
-                email 'contact@inetsoftware.de'
-            }
-        }
-        scm {
-            connection 'scm:https://gamma@github.com/i-net-software/gradle-js-plugin'
-            developerConnection 'scm:git@github.com/i-net-software/gradle-js-plugin.git'
-            url 'http://github.com/i-net-software/gradle-js-plugin'
+        tasks.named('groovydocJar').configure {
+            enabled = false
         }
     }
-}
-
-// download dependencies all at once, keeps downloads out of travis output
-task resolveAllDependencies {
-    doLast {
-        configurations.all { it.resolve() }
+    
+    publishing.publications.all {
+        if (it instanceof MavenPublication) {
+            it.pom {
+                name = 'Gradle JavaScript Plugin'
+                description = 'Gradle plugin for working with JavaScript, JSDoc, JSHint, and RequireJS.'
+                url = 'https://github.com/i-net-software/gradle-js-plugin'
+                licenses {
+                    license {
+                        name = 'The Apache License, Version 2.0'
+                        url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                    }
+                }
+                developers {
+                    developer {
+                        id = 'eriwen'
+                        name = 'Eric Wendelin'
+                        email = 'me@eriwen.com'
+                    }
+                    developer {
+                        id = 'inetsoftware'
+                        name = 'i-net software GmbH'
+                        email = 'contact@inetsoftware.de'
+                    }
+                }
+                scm {
+                    connection = 'scm:git:git://github.com/i-net-software/gradle-js-plugin.git'
+                    developerConnection = 'scm:git:ssh://github.com/i-net-software/gradle-js-plugin.git'
+                    url = 'https://github.com/i-net-software/gradle-js-plugin'
+                }
+            }
+        }
     }
 }
 
