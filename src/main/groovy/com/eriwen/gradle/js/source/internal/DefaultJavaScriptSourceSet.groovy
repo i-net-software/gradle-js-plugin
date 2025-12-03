@@ -9,8 +9,6 @@ import org.gradle.api.file.SourceDirectorySet
 import org.gradle.api.internal.file.DefaultSourceDirectorySet
 import org.gradle.api.internal.file.FileResolver
 import org.gradle.internal.reflect.Instantiator
-import org.gradle.util.ConfigureUtil
-import org.gradle.util.GUtil
 import org.gradle.util.GradleVersion
 
 class DefaultJavaScriptSourceSet implements JavaScriptSourceSet {
@@ -23,7 +21,7 @@ class DefaultJavaScriptSourceSet implements JavaScriptSourceSet {
     
     DefaultJavaScriptSourceSet(String name, Project project, Instantiator instantiator, FileResolver fileResolver) {
         this.name = name
-        this.displayName = GUtil.toWords(name)
+        this.displayName = name.split(/(?=[A-Z])/).join(' ').toLowerCase().replaceAll(/\b\w/, { it.toUpperCase() })
         if (GradleVersion.current().compareTo(GradleVersion.version("5.0")) >= 0) {
             this.js = project.objects.sourceDirectorySet(name, String.format("%s JavaScript source", displayName))
         } else if (GradleVersion.current().compareTo(GradleVersion.version("2.12")) >= 0) {
@@ -51,11 +49,10 @@ class DefaultJavaScriptSourceSet implements JavaScriptSourceSet {
     }
     
     JavaScriptSourceSet configure(Closure closure) {
-        if (GradleVersion.current().compareTo(GradleVersion.version("2.14")) >= 0) {
-            ConfigureUtil.configureSelf(closure, this)
-        } else {
-            ConfigureUtil.configure(closure, this, false)
-        }
+        closure.delegate = this
+        closure.resolveStrategy = Closure.DELEGATE_FIRST
+        closure.call(this)
+        return this
     }
 
     JavaScriptProcessingChain getProcessing() {

@@ -1,7 +1,7 @@
 package com.eriwen.gradle.js
 
 import org.gradle.api.Project
-import org.gradle.process.internal.ExecException
+import org.gradle.api.GradleException
 import org.gradle.testfixtures.ProjectBuilder
 import org.junit.Rule
 import org.junit.rules.TemporaryFolder
@@ -34,7 +34,7 @@ class JsHintTaskTest extends Specification {
         task.run()
 
         then:
-        notThrown ExecException
+        notThrown GradleException
     }
 
     def "build passes with only valid files"() {
@@ -46,7 +46,7 @@ class JsHintTaskTest extends Specification {
         task.run()
 
         then:
-        notThrown ExecException
+        notThrown GradleException
     }
 
     def "build fails with invalid files"() {
@@ -59,14 +59,14 @@ class JsHintTaskTest extends Specification {
         task.run()
 
         then:
-        ExecException e = thrown()
+        GradleException e = thrown()
     }
 
     def "build writes to stdout and accepts options"() {
         given:
         task.ignoreExitCode = false
         task.outputToStdOut = true
-        project.jshint.options = [scripturl: "true", laxcomma: "true"]
+        project.jshint.options = [undef: "true", unused: "true"]
 
         addValidFile()
 
@@ -74,7 +74,7 @@ class JsHintTaskTest extends Specification {
         task.run()
 
         then:
-        notThrown ExecException
+        notThrown GradleException
     }
 
     def "jshint processes many files"() {
@@ -89,7 +89,7 @@ class JsHintTaskTest extends Specification {
         task.run()
 
         then:
-        notThrown ExecException
+        notThrown GradleException
     }
 
     def "does not generate checkstyle report when disabled"() {
@@ -117,36 +117,59 @@ class JsHintTaskTest extends Specification {
         def contents = new File(dest as String).text
         assert contents =~ "<checkstyle"
     }
-   
 
-    def "fails without predef option to jshint"() {
+    def "fails with undefined variable"() {
         given:
         task.ignoreExitCode = false
         task.reporter = 'checkstyle'
-        project.jshint.options = [ undef: "true" ]
-        project.jshint.predef = [ someGlobalTwo: 5 ]
-        addFile("invalidWithGlobal.js", "var b = someGlobal;")
+        project.jshint.options = [undef: "true"]
+        addFile("invalidWithUndef.js", "var b = someUndefinedVar;")
 
         when:
         task.run()
 
         then:
-        thrown ExecException
+        GradleException e = thrown()
     }
 
-    def "passes with predef option to jshint"() {
+    def "passes with defined variable"() {
         given:
         task.ignoreExitCode = false
         task.reporter = 'checkstyle'
-        project.jshint.options = [ undef: "true" ]
-        project.jshint.predef = [ someGlobal: 5 ]
-        addFile("validWithGlobal.js", "var b = someGlobal;")
+        project.jshint.options = [undef: "true"]
+        addFile("validWithDef.js", "var someVar = 5; var b = someVar;")
 
         when:
         task.run()
 
         then:
-        notThrown ExecException
+        notThrown GradleException
+    }
+
+    def "detects unused variables"() {
+        given:
+        task.ignoreExitCode = false
+        project.jshint.options = [unused: "true"]
+        addFile("unused.js", "var unusedVar = 5;")
+
+        when:
+        task.run()
+
+        then:
+        GradleException e = thrown()
+    }
+
+    def "detects strict mode violations"() {
+        given:
+        task.ignoreExitCode = false
+        project.jshint.options = [strict: "true"]
+        addFile("strict.js", "function test() { this.prop = 5; }")
+
+        when:
+        task.run()
+
+        then:
+        GradleException e = thrown()
     }
 
     def addValidFile() {
@@ -154,11 +177,11 @@ class JsHintTaskTest extends Specification {
     }
 
     def addInvalidFile() {
-        // no semicolon, jshint should fail
-        addFile("invalid.js", "var a = 5")
+        // Missing semicolon and using undefined variable
+        addFile("invalid.js", "var a = 5\nvar b = undefinedVar")
     }
 
-    def addFile(name,contents) {
+    def addFile(name, contents) {
         def file = new File(src as String, name)
         file << contents
     }

@@ -1,25 +1,33 @@
 plugins {
-    id "com.gradle.plugin-publish" version "0.12.0"
-    id "java-gradle-plugin"
+    id 'java-gradle-plugin'
+    id 'com.gradle.plugin-publish' version '1.2.1' // Updated for Gradle 9 compatibility
+    id 'signing' // Required for Maven Central
+    id 'io.github.gradle-nexus.publish-plugin' version '2.0.0' // Automates Sonatype Nexus publishing
 }
 
 apply plugin: 'groovy'
 apply plugin: 'maven-publish'
-apply plugin: 'jacoco'
-apply plugin: 'project-report'
+apply plugin: 'java'
 
-sourceCompatibility = 11
-targetCompatibility = 11
+java {
+    sourceCompatibility = JavaVersion.VERSION_11
+    targetCompatibility = JavaVersion.VERSION_11
+}
+
+// Configure processResources to handle duplicate plugin descriptor files
+// java-gradle-plugin generates them, but we also have them in source for consistency
+processResources {
+    duplicatesStrategy = DuplicatesStrategy.INCLUDE
+}
 
 defaultTasks 'clean', 'build'
 
-version = '2.17.0'
 group = 'de.inetsoftware.gradle'
 ext.archivesBaseName = 'gradle-js-plugin'
-ext.isSnapshot = version.endsWith("-SNAPSHOT")
+ext.isSnapshot = project.version.toString().endsWith("-SNAPSHOT")
 
 repositories {
-    jcenter()
+    mavenCentral()
 }
 
 task createClasspathManifest {
@@ -35,20 +43,36 @@ task createClasspathManifest {
 }
 
 dependencies {
-    compile gradleApi()
-    compile('com.google.javascript:closure-compiler:v20240317') {
+    implementation gradleApi()
+    implementation localGroovy()
+    implementation('com.google.javascript:closure-compiler:v20250407') {
         exclude module: 'junit'
     }
-    compile('io.jdev.html2js:html2js:0.1') {
+    implementation('io.jdev.html2js:html2js:0.1') {
         exclude module: 'groovy-all'
     }
-    testCompile gradleTestKit()
-    testCompile files(createClasspathManifest)
-    testCompile('org.spockframework:spock-core:1.0-groovy-2.4') {
-        exclude module: 'junit-dep'
-        exclude module: 'groovy-all'
-    }
-    testCompile 'commons-lang:commons-lang:2.6'
+    
+    // JUnit 4 for JUnit-based tests
+    testImplementation 'junit:junit:4.13.2'
+    // Groovy test support - use same version as Gradle's bundled Groovy
+    testImplementation localGroovy()
+    testImplementation gradleTestKit()
+    testImplementation files(createClasspathManifest)
+    
+    // Spock version selection based on Gradle version:
+    // - Gradle 8.x uses Groovy 3.0.x -> Spock 2.3-groovy-3.0
+    // - Gradle 9.x uses Groovy 4.0.x -> Spock 2.3-groovy-4.0
+    def spockVersion = project.gradle.gradleVersion.startsWith('9.') 
+        ? '2.3-groovy-4.0' 
+        : '2.3-groovy-3.0'
+    testImplementation "org.spockframework:spock-core:${spockVersion}"
+    
+    // JUnit 5 for JUnit Platform tests (if any)
+    testImplementation(platform('org.junit:junit-bom:5.10.1'))
+    testImplementation('org.junit.jupiter:junit-jupiter')
+    testRuntimeOnly('org.junit.platform:junit-platform-launcher') // Required for Gradle 9+
+    
+    testImplementation 'commons-lang:commons-lang:2.6'
 }
 
 compileGroovy {
@@ -57,13 +81,13 @@ compileGroovy {
 
 task sourceJar(type: Jar) {
     description = 'An archive of the source code for Maven Central'
-    classifier = 'sources'
+    archiveClassifier = 'sources'
     from sourceSets.main.groovy
 }
 
 task groovydocJar(type: Jar) {
     description = 'An archive of the GroovyDocs for Maven Central'
-    classifier = 'javadoc'
+    archiveClassifier = 'javadoc'
     from groovydoc
 }
 
@@ -72,54 +96,70 @@ artifacts {
 }
 
 publishing {
-    publications {
-        maven(MavenPublication) {
-            if (plugins.hasPlugin('war')) {
-                from components.web
-            } else {
-                from components.java
-            }
+    repositories {
+        mavenLocal()
+    }
+}
 
-            artifact sourceJar {
-                classifier 'sources'
-            }
-
-            artifact groovydocJar {
-                classifier 'javadoc'
-            }
+// Configure Nexus Publish Plugin for Sonatype/Maven Central
+nexusPublishing {
+    repositories {
+        sonatype {
+            // New Central Portal URLs
+            nexusUrl.set(uri("https://ossrh-staging-api.central.sonatype.com/service/local/"))
+            snapshotRepositoryUrl.set(uri("https://central.sonatype.com/repository/maven-snapshots/"))
+            // Credentials - try both property name variations
+            username.set(
+                project.findProperty('ossrhUsername') 
+                    ?: project.findProperty('sonatypeUsername')
+                    ?: System.getenv('SONATYPE_USERNAME') 
+                    ?: System.getenv('OSSRH_USERNAME')
+                    ?: ""
+            )
+            password.set(
+                project.findProperty('ossrhPassword')
+                    ?: project.findProperty('sonatypePassword')
+                    ?: System.getenv('SONATYPE_PASSWORD')
+                    ?: System.getenv('OSSRH_PASSWORD')
+                    ?: ""
+            )
+            // Staging profile ID - should be the UUID from Sonatype, not the domain
+            // Get it from: https://central.sonatype.com/ -> Staging Profiles
+            // Or leave it out to auto-detect by groupId
+            // If you have a staging profile UUID, uncomment and set it:
+            // stagingProfileId.set('xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx')
         }
     }
+}
+
+closeStagingRepositories {
+    closeStagingRepositories.dependsOn 'publishToSonatype'
+    publish.finalizedBy 'closeStagingRepositories'
+}
+
+// Configure signing for Maven Central
+signing {
+    useInMemoryPgpKeys( project.findProperty('signing.key'), project.findProperty('signing.password') )
+    sign publishing.publications
 }
 
 gradlePlugin {
-    plugins {
-        jsPlugin {
-            id = 'com.cloudzilla.gradle.js'
-            implementationClass = 'com.eriwen.gradle.js.JsPlugin'
-        }
-    }
-}
-
-
-pluginBundle {
-    website = 'https://github.com/mampcs/gradle-js-plugin/'
-    vcsUrl = 'https://github.com/mampcs/gradle-js-plugin/'
-    description = 'Gradle plugin for working with JS'
-    tags = ['javascript', 'jshint', 'requirejs']
-
+    website = 'https://github.com/i-net-software/gradle-js-plugin'
+    vcsUrl = 'https://github.com/i-net-software/gradle-js-plugin'
+    
     plugins {
         jsPlugin {
             id = 'de.inetsoftware.gradle.js'
+            implementationClass = 'com.eriwen.gradle.js.JsPlugin'
             displayName = 'Gradle JavaScript Plugin'
+            description = 'Gradle plugin for working with JavaScript, JSDoc, JSHint, and RequireJS.'
+            tags.set(['javascript', 'js', 'jsdoc', 'jshint', 'requirejs', 'closure-compiler'])
         }
-    }
-    mavenCoordinates {
-        groupId = 'de.inetsoftware.gradle'
-        artifactId = 'gradle-js-plugin'
     }
 }
 
 test {
+    useJUnitPlatform()
     systemProperties['version'] = version
     testLogging {
         stackTraceFilters 'truncate', 'groovy'
@@ -128,45 +168,53 @@ test {
     }
 }
 
-/**
- * Create POM config and return for use by other tasks.
- */
-def getPomConfiguration() {
-    return {
-        name 'Gradle JS Plugin'
-        packaging 'jar'
-        description 'A Gradle plugin for working with JS.'
-        url 'https://github.com/i-net-software/gradle-js-plugin'
-        licenses {
-            license {
-                name 'The Apache Software License, Version 2.0'
-                url 'http://www.apache.org/licenses/LICENSE-2.0.txt'
-                distribution 'repo'
-            }
+// Configure POM metadata for Maven Central (if publishing there)
+// The java-gradle-plugin automatically creates publications, configure them via afterEvaluate
+afterEvaluate {
+    // For snapshots, skip sources and javadoc tasks to minimize published artifacts
+    if (project.version.toString().endsWith('-SNAPSHOT')) {
+        tasks.named('sourcesJar').configure {
+            enabled = false
         }
-        developers {
-            developer {
-                id 'eriwen'
-                name 'Eric Wendelin'
-                email 'me@eriwen.com'
-            }
-            developer {
-                id 'inetsoftware'
-                name 'i-net software GmbH'
-                email 'contact@inetsoftware.de'
-            }
+        tasks.named('groovydocJar').configure {
+            enabled = false
         }
-        scm {
-            connection 'scm:https://gamma@github.com/i-net-software/gradle-js-plugin'
-            developerConnection 'scm:git@github.com/i-net-software/gradle-js-plugin.git'
-            url 'http://github.com/i-net-software/gradle-js-plugin'
+    }
+    
+    publishing.publications.all {
+        if (it instanceof MavenPublication) {
+            it.pom {
+                name = 'Gradle JavaScript Plugin'
+                description = 'Gradle plugin for working with JavaScript, JSDoc, JSHint, and RequireJS.'
+                url = 'https://github.com/i-net-software/gradle-js-plugin'
+                licenses {
+                    license {
+                        name = 'The Apache License, Version 2.0'
+                        url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                    }
+                }
+                developers {
+                    developer {
+                        id = 'eriwen'
+                        name = 'Eric Wendelin'
+                        email = 'me@eriwen.com'
+                    }
+                    developer {
+                        id = 'inetsoftware'
+                        name = 'i-net software GmbH'
+                        email = 'contact@inetsoftware.de'
+                    }
+                }
+                scm {
+                    connection = 'scm:git:git://github.com/i-net-software/gradle-js-plugin.git'
+                    developerConnection = 'scm:git:ssh://github.com/i-net-software/gradle-js-plugin.git'
+                    url = 'https://github.com/i-net-software/gradle-js-plugin'
+                }
+            }
         }
     }
 }
 
-// download dependencies all at once, keeps downloads out of travis output
-task resolveAllDependencies {
-    doLast {
-        configurations.all { it.resolve() }
-    }
+tasks.named('compileTestGroovy') {
+    dependsOn tasks.named('processTestResources')
 }

@@ -19,8 +19,17 @@ import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.SourceTask
+import org.gradle.api.tasks.util.internal.PatternSetFactory
+import javax.inject.Inject
 
 class CombineJsTask extends SourceTask {
+    @Inject
+    private PatternSetFactory patternSetFactory
+    
+    protected PatternSetFactory getPatternSetFactory() {
+        return patternSetFactory
+    }
+    
     @OutputFile def dest
 
     @Input encoding = System.properties['file.encoding']
@@ -31,10 +40,19 @@ class CombineJsTask extends SourceTask {
 
     @TaskAction
     def run() { 
-        ant.concat(destfile: (dest as File).canonicalPath, fixlastline: 'yes', encoding: encoding) {
-            source.files.each {
-                logger.info("Adding to fileset: ${it}")
-                fileset(file: it)
+        final File destFile = getDest()
+        destFile.parentFile.mkdirs()
+        
+        destFile.withWriter(encoding) { writer ->
+            source.files.each { sourceFile ->
+                logger.info("Adding to fileset: ${sourceFile}")
+                sourceFile.withReader(encoding) { reader ->
+                    writer << reader
+                }
+                // Add newline if file doesn't end with one (fixlastline: 'yes' equivalent)
+                if (!sourceFile.text.endsWith('\n') && !sourceFile.text.endsWith('\r')) {
+                    writer.write('\n')
+                }
             }
         }
     }

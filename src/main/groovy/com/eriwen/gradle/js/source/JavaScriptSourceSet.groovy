@@ -4,9 +4,8 @@ import org.gradle.api.Action
 import org.gradle.api.Named
 import org.gradle.api.file.FileCollection
 import org.gradle.api.file.SourceDirectorySet
-import org.gradle.util.Configurable
 
-interface JavaScriptSourceSet extends Named, Configurable<JavaScriptSourceSet> {
+interface JavaScriptSourceSet extends Named {
 
     SourceDirectorySet getJs()
 
@@ -17,4 +16,6 @@ interface JavaScriptSourceSet extends Named, Configurable<JavaScriptSourceSet> {
     JavaScriptProcessingChain processing(Action<JavaScriptProcessingChain> action)
     
     FileCollection getProcessed()
+    
+    JavaScriptSourceSet configure(Closure closure)
 }

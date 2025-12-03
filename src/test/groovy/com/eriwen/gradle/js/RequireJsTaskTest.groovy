@@ -109,8 +109,20 @@ class RequireJsTaskTest extends Specification {
     }
 
     def addJamDir() {
-        new AntBuilder().copy(todir: new File("${project.projectDir.absolutePath}${File.separator}jam").canonicalPath) {
-            fileset(dir : new File("src/test/resources/requirejs/jam").canonicalPath)
+        def sourceDir = new File("src/test/resources/requirejs/jam")
+        def targetDir = new File("${project.projectDir.absolutePath}${File.separator}jam")
+        targetDir.mkdirs()
+        sourceDir.eachFileRecurse { file ->
+            def relativePath = file.absolutePath.substring(sourceDir.absolutePath.length() + 1)
+            def targetFile = new File(targetDir, relativePath)
+            if (file.isFile()) {
+                targetFile.parentFile.mkdirs()
+                targetFile.withOutputStream { out ->
+                    file.withInputStream { in ->
+                        out << in
+                    }
+                }
+            }
         }
     }
 
