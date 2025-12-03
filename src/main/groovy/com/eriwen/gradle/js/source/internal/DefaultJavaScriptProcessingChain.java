@@ -66,7 +66,12 @@ public class DefaultJavaScriptProcessingChain extends DefaultNamedDomainObjectLi
 
     @SuppressWarnings("unchecked")
     public <T extends SourceTask> T task(String name, Class<T> type, Closure closure) {
-        T task = (T)project.task(Collections.singletonMap("type", type), name, closure);
+        T task = project.getTasks().create(name, type);
+        if (closure != null) {
+            closure.setDelegate(task);
+            closure.setResolveStrategy(Closure.DELEGATE_FIRST);
+            closure.call(task);
+        }
         add(task);
         return task;
     }
