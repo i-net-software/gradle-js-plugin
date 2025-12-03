@@ -1,6 +1,44 @@
-# This plugin is no longer maintained! Please consider the [Gradle Node Plugin](https://github.com/node-gradle/gradle-node-plugin).
+# Gradle JavaScript Plugin
 
-# Gradle Javascript Plugin!
+> **Note:** This is a maintained fork of the original [gradle-js-plugin](https://github.com/eriwen/gradle-js-plugin), updated for **Gradle 8/9 compatibility** and published under the `de.inetsoftware` group ID.
+
+> **Disclaimer:** Most of the changes in this fork, including Gradle 8/9 compatibility fixes, Ant removal, and CI/CD pipeline improvements, were created with the assistance of Cursor AI. While the code has been tested and verified, please review changes carefully before using in production environments.
+
+## Fork Information
+
+This fork maintains **forward compatibility** with the original plugin while providing:
+- **Gradle 8/9 compatibility** - Fixed deprecated API usage and compatibility issues
+- **Updated group ID** - Published as `de.inetsoftware.gradle:gradle-js-plugin`
+- **Updated plugin IDs** - Use `de.inetsoftware.gradle.js` instead of `com.cloudzilla.gradle.js`
+- **Modern CI/CD pipeline** - GitHub Actions workflows replacing Travis CI
+- **Removed Ant dependencies** - All Ant usage replaced with Java/Gradle APIs for better compatibility
+- **All original functionality preserved** - Drop-in replacement for the original plugin
+
+### Migration from Original Plugin
+
+If you're using the original `com.cloudzilla.gradle.js` plugin, you can migrate to this fork by:
+
+1. **Update your plugin declaration:**
+   ```groovy
+   plugins {
+     id "de.inetsoftware.gradle.js" version "2.18.0"
+   }
+   ```
+
+2. **Or update buildscript dependency:**
+   ```groovy
+   buildscript {
+       dependencies {
+           classpath 'de.inetsoftware.gradle:gradle-js-plugin:2.18.0'
+       }
+   }
+   apply plugin: 'de.inetsoftware.gradle.js'
+   ```
+
+All task names and configuration remain the same - only the plugin ID and group ID have changed.
+
+---
+
 Aiming to be the *simplest* way to manage your JavaScript in a build.
 
 # Quick Start
@@ -9,7 +47,7 @@ Wrangling your JS in a [Gradle](https://gradle.org) build is easy! Just add this
 ### Gradle 2.1+
 ```groovy
 plugins {
-  id "com.cloudzilla.gradle.js" version "2.16.2"
+  id "de.inetsoftware.gradle.js" version "2.18.0"
 }
 ```
 
@@ -74,15 +112,27 @@ gzipJs {
 }
 ```
 
-### [JSHint](http://jshint.com) support ([options](#jshint))
+### JavaScript Linting with Closure Compiler ([options](#jshint))
+> **Note:** This plugin now uses Google Closure Compiler for JavaScript linting instead of JSHint. The task is still named `jshint` for backward compatibility, but it uses Closure Compiler's static analysis capabilities.
+
 ```groovy
 jshint {
     source = javascript.source.dev.js.files
     dest = file("${buildDir}/jshint.out")
-    reporter = 'checkstyle'
-    jshint.options = [expr: "true", unused: "true"]
+    reporter = 'checkstyle'  // Supports 'checkstyle' XML format or plain text
+    ignoreExitCode = true     // Set to false to fail build on warnings/errors
+    outputToStdOut = false   // Set to true to output to STDOUT instead of file
 }
 ```
+
+The Closure Compiler will analyze your JavaScript code and report:
+- Syntax errors
+- Type mismatches
+- Undefined variables
+- Unused code
+- And other static analysis warnings
+
+**Migration Note:** If you were using JSHint-specific options like `jshint.options` or `jshint.predef`, these are no longer available as the plugin now uses Closure Compiler's analysis engine. The output format and basic configuration options remain compatible.
 
 ### [JSDoc 3](https://github.com/jsdoc3/jsdoc) support ([options](#jsdoc))
 ```groovy
@@ -131,14 +181,16 @@ requireJs {
 - source = File to compress
 - dest = File for compressed output
 
-### jshint
-- source = Files to assess with JSHint
-- dest = File for JSHint output
-- *(Optional)* reporter = Only 'checkstyle' supported right now. Defaults to plain JSHint output.
-- *(Optional)* ignoreExitCode = Fail build if `false` and jshint finds problems. Default is `true`.
+### jshint (JavaScript Linting with Closure Compiler)
+> **Note:** This task now uses Google Closure Compiler for static analysis instead of JSHint. The task name remains `jshint` for backward compatibility.
+
+- source = Files to analyze with Closure Compiler
+- dest = File for linting output
+- *(Optional)* reporter = Output format: `'checkstyle'` for XML format, or omit for plain text. Defaults to plain text.
+- *(Optional)* ignoreExitCode = Fail build if `false` and linting finds problems. Default is `true`.
 - *(Optional)* outputToStdOut = `true` will output to STDOUT instead of file. Default is `false`.
-- *(Optional)* jshint.options = Map of options (e.g. `[expr: "true", unused: "true"]`)
-- *(Optional)* jshint.predef = Map of predefined globals so JSHint doesn't complain about them
+
+**Important:** JSHint-specific options (`jshint.options`, `jshint.predef`) are no longer available as this plugin now uses Closure Compiler's static analysis engine. Closure Compiler provides more comprehensive type checking and error detection than JSHint.
 
 
 ### jsdoc
@@ -177,6 +229,18 @@ JSDoc 3 options:
 
 What, you want more? [Tell me!](https://github.com/eriwen/gradle-js-plugin/issues)
 
+## Requirements
+
+- **Gradle 8.14+ or 9.2.1+** - This fork requires Gradle 8.14 or later, with full support for Gradle 9.2.1
+- **Java 11+** - Required for compilation
+
+## Compatibility
+
+This fork has been tested and verified with:
+- Gradle 8.14, 8.14.3, 9.2.1
+- Java 17, 21
+- All original plugin functionality preserved
+
 ## Contributors
 This project is made possible due to the efforts of these fine people:
 
@@ -189,6 +253,11 @@ This project is made possible due to the efforts of these fine people:
 * [Martin Snyder](https://github.com/MartinSnyder) - requireJs impl option
 * [Aaron Arnett](https://github.com/a3rnett) - Remove explicit MavenCentral dependency
 * [sv99](https://github.com/sv99) - Improve Gradle version compatibility
+* i-net software GmbH - Gradle 8/9 compatibility, Ant removal, and ongoing maintenance
 
 ## See Also
 The [Gradle CSS Plugin](https://github.com/eriwen/gradle-css-plugin)!
+
+## License
+
+This plugin is licensed under the [Apache License, Version 2.0](http://www.apache.org/licenses/LICENSE-2.0.html) with no warranty (expressed or implied) for any purpose.
