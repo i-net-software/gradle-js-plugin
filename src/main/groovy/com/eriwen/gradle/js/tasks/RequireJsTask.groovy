@@ -20,7 +20,6 @@ import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
 import com.eriwen.gradle.js.ResourceUtil
-import com.eriwen.gradle.js.RhinoExec
 import org.gradle.api.tasks.SourceTask
 import org.gradle.api.tasks.OutputFile
 
@@ -28,7 +27,6 @@ class RequireJsTask extends SourceTask {
     private static final String REQUIREJS_PATH = 'r.js'
     private static final String TMP_DIR = "tmp${File.separator}js"
     private static final ResourceUtil RESOURCE_UTIL = new ResourceUtil()
-    private final RhinoExec rhino = new RhinoExec(project)
 
     @OutputDirectory
     @Optional
@@ -77,6 +75,6 @@ class RequireJsTask extends SourceTask {
             }
         }
 
-        rhino.execute(args, [ignoreExitCode: ignoreExitCode, workingDir: project.projectDir.canonicalPath, maxHeapSize: rhinoMaxHeapSize])
+        // rhino.execute(args, [ignoreExitCode: ignoreExitCode, workingDir: project.projectDir.canonicalPath, maxHeapSize: rhinoMaxHeapSize])
     }
 }
