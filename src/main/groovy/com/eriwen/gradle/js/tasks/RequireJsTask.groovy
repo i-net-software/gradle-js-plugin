@@ -23,14 +23,17 @@ import com.eriwen.gradle.js.ResourceUtil
 import org.gradle.api.tasks.SourceTask
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.util.internal.PatternSetFactory
-import javax.inject.Inject
+import org.gradle.process.JavaExecSpec
 
 class RequireJsTask extends SourceTask {
-    @Inject
-    private PatternSetFactory patternSetFactory
+    private PatternSetFactory _patternSetFactory
     
+    @Override
     protected PatternSetFactory getPatternSetFactory() {
-        return patternSetFactory
+        if (_patternSetFactory == null) {
+            _patternSetFactory = project.services.get(PatternSetFactory.class)
+        }
+        return _patternSetFactory
     }
     private static final String REQUIREJS_PATH = 'r.js'
     private static final String TMP_DIR = "tmp${File.separator}js"
@@ -83,6 +86,27 @@ class RequireJsTask extends SourceTask {
             }
         }
 
-        // rhino.execute(args, [ignoreExitCode: ignoreExitCode, workingDir: project.projectDir.canonicalPath, maxHeapSize: rhinoMaxHeapSize])
+        // Execute RequireJS using Rhino via JavaExec
+        try {
+            project.javaexec { JavaExecSpec spec ->
+                spec.classpath = project.configurations.rhino
+                spec.main = 'org.mozilla.javascript.tools.shell.Main'
+                spec.args = args
+                spec.workingDir = project.projectDir
+                if (rhinoMaxHeapSize) {
+                    spec.maxHeapSize = rhinoMaxHeapSize
+                }
+                spec.ignoreExitValue = ignoreExitCode
+            }
+        } catch (org.gradle.process.internal.ExecException e) {
+            if (!ignoreExitCode) {
+                throw e
+            }
+        } catch (Exception e) {
+            // For other exceptions, check if we should ignore
+            if (!ignoreExitCode) {
+                throw new org.gradle.process.internal.ExecException("RequireJS execution failed: ${e.message}", e)
+            }
+        }
     }
 }

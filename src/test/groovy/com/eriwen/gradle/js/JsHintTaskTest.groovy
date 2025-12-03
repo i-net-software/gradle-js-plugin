@@ -16,6 +16,7 @@ class JsHintTaskTest extends Specification {
     def dest
 
     def setup() {
+        dir.create() // Ensure temporary folder is created
         project.apply(plugin: JsPlugin)
         project.repositories.mavenCentral()
         task = project.tasks.jshint

@@ -22,14 +22,16 @@ import org.gradle.api.tasks.SourceTask
 import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.util.internal.PatternSetFactory
-import javax.inject.Inject
 
 class Html2jsTask extends SourceTask {
-    @Inject
-    private PatternSetFactory patternSetFactory
+    private PatternSetFactory _patternSetFactory
     
+    @Override
     protected PatternSetFactory getPatternSetFactory() {
-        return patternSetFactory
+        if (_patternSetFactory == null) {
+            _patternSetFactory = project.services.get(PatternSetFactory.class)
+        }
+        return _patternSetFactory
     }
     @OutputFile def dest
     @Optional @Input def moduleName

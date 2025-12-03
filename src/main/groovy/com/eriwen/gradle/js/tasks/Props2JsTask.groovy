@@ -21,14 +21,16 @@ import org.gradle.api.tasks.SourceTask
 import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.util.internal.PatternSetFactory
-import javax.inject.Inject
 
 class Props2JsTask extends SourceTask {
-    @Inject
-    private PatternSetFactory patternSetFactory
+    private PatternSetFactory _patternSetFactory
     
+    @Override
     protected PatternSetFactory getPatternSetFactory() {
-        return patternSetFactory
+        if (_patternSetFactory == null) {
+            _patternSetFactory = project.services.get(PatternSetFactory.class)
+        }
+        return _patternSetFactory
     }
     private static final String PROPS2JS_JAR = 'props2js-0.1.0.jar'
     private static final String TMP_DIR = "tmp${File.separator}js"

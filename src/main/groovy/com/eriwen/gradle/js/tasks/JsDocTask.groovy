@@ -22,14 +22,16 @@ import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.util.internal.PatternSetFactory
 import org.gradle.process.JavaExecSpec
-import javax.inject.Inject
 
 class JsDocTask extends SourceTask {
-    @Inject
-    private PatternSetFactory patternSetFactory
+    private PatternSetFactory _patternSetFactory
     
+    @Override
     protected PatternSetFactory getPatternSetFactory() {
-        return patternSetFactory
+        if (_patternSetFactory == null) {
+            _patternSetFactory = project.services.get(PatternSetFactory.class)
+        }
+        return _patternSetFactory
     }
     private static final String JSDOC_NAME = 'jsdoc-releases-3.3'
     private static final String JSDOC_PATH = "${JSDOC_NAME}.zip"

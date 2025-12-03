@@ -15,6 +15,7 @@ class RequireJsTaskTest extends Specification {
     def src
 
     def setup() {
+        dir.create() // Ensure temporary folder is created
         project.apply(plugin: JsPlugin)
         project.repositories.mavenCentral()
         task = project.tasks.requireJs

@@ -21,14 +21,16 @@ import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.SourceTask
 import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.util.internal.PatternSetFactory
-import javax.inject.Inject
 
 class MinifyJsTask extends SourceTask {
-    @Inject
-    private PatternSetFactory patternSetFactory
+    private PatternSetFactory _patternSetFactory
     
+    @Override
     protected PatternSetFactory getPatternSetFactory() {
-        return patternSetFactory
+        if (_patternSetFactory == null) {
+            _patternSetFactory = project.services.get(PatternSetFactory.class)
+        }
+        return _patternSetFactory
     }
     private static final JsMinifier MINIFIER = new JsMinifier()
 

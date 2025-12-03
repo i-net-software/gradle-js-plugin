@@ -10,8 +10,12 @@ apply plugin: 'maven-publish'
 apply plugin: 'java'
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_11
-    targetCompatibility = JavaVersion.VERSION_11
+    // Use Java 21 as primary version for newer Closure Compiler support
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
 }
 
 // Configure processResources to handle duplicate plugin descriptor files
@@ -42,10 +46,16 @@ task createClasspathManifest {
     }
 }
 
+// Determine Closure Compiler version based on Java version
+def javaVersion = JavaVersion.current()
+def closureCompilerVersion = javaVersion >= JavaVersion.VERSION_21 
+    ? 'v20250407'  // Latest version for Java 21+
+    : 'v20240317'  // Older version for Java 17
+
 dependencies {
     implementation gradleApi()
     implementation localGroovy()
-    implementation('com.google.javascript:closure-compiler:v20250407') {
+    implementation("com.google.javascript:closure-compiler:${closureCompilerVersion}") {
         exclude module: 'junit'
     }
     implementation('io.jdev.html2js:html2js:0.1') {

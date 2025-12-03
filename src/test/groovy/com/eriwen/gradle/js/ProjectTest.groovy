@@ -12,6 +12,7 @@ class ProjectTest extends Specification {
     Project project
     
     def setup() {
+        projectRule.before() // Ensure the rule is initialized
         project = projectRule.project
     }
     
