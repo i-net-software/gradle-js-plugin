@@ -13,13 +13,13 @@ targetCompatibility = 11
 
 defaultTasks 'clean', 'build'
 
-version = '2.17.0'
+version = '2.18.0'
 group = 'de.inetsoftware.gradle'
 ext.archivesBaseName = 'gradle-js-plugin'
 ext.isSnapshot = version.endsWith("-SNAPSHOT")
 
 repositories {
-    jcenter()
+    mavenCentral()
 }
 
 task createClasspathManifest {
@@ -35,20 +35,18 @@ task createClasspathManifest {
 }
 
 dependencies {
-    compile gradleApi()
-    compile('com.google.javascript:closure-compiler:v20240317') {
+    implementation gradleApi()
+    implementation('com.google.javascript:closure-compiler:v20250407') {
         exclude module: 'junit'
     }
-    compile('io.jdev.html2js:html2js:0.1') {
+    implementation('io.jdev.html2js:html2js:0.1') {
         exclude module: 'groovy-all'
     }
-    testCompile gradleTestKit()
-    testCompile files(createClasspathManifest)
-    testCompile('org.spockframework:spock-core:1.0-groovy-2.4') {
-        exclude module: 'junit-dep'
-        exclude module: 'groovy-all'
-    }
-    testCompile 'commons-lang:commons-lang:2.6'
+    testImplementation gradleTestKit()
+    testImplementation files(createClasspathManifest)
+    testImplementation('org.spockframework:spock-core:2.3-groovy-3.0')
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'commons-lang:commons-lang:2.6'
 }
 
 compileGroovy {
@@ -57,13 +55,13 @@ compileGroovy {
 
 task sourceJar(type: Jar) {
     description = 'An archive of the source code for Maven Central'
-    classifier = 'sources'
+    archiveClassifier = 'sources'
     from sourceSets.main.groovy
 }
 
 task groovydocJar(type: Jar) {
     description = 'An archive of the GroovyDocs for Maven Central'
-    classifier = 'javadoc'
+    archiveClassifier = 'javadoc'
     from groovydoc
 }
 
@@ -80,13 +78,8 @@ publishing {
                 from components.java
             }
 
-            artifact sourceJar {
-                classifier 'sources'
-            }
-
-            artifact groovydocJar {
-                classifier 'javadoc'
-            }
+            artifact sourceJar
+            artifact groovydocJar
         }
     }
 }
@@ -99,7 +92,6 @@ gradlePlugin {
         }
     }
 }
-
 
 pluginBundle {
     website = 'https://github.com/mampcs/gradle-js-plugin/'
@@ -169,4 +161,8 @@ task resolveAllDependencies {
     doLast {
         configurations.all { it.resolve() }
     }
+}
+
+tasks.named('compileTestGroovy') {
+    dependsOn tasks.named('processTestResources')
 }
