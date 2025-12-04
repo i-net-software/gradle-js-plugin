@@ -99,6 +99,20 @@ task groovydocJar(type: Jar) {
     description = 'An archive of the GroovyDocs for Maven Central'
     archiveClassifier = 'javadoc'
     from groovydoc
+    // Only create groovydocJar if groovydoc task is enabled
+    onlyIf {
+        groovydoc.enabled
+    }
+}
+
+// Skip groovydoc if Java version is incompatible with compiled classes
+// Java 17 can't process class files compiled with Java 21 (class file version 65.0)
+groovydoc {
+    onlyIf {
+        // Only run groovydoc if current Java version can process Java 21 class files
+        // This prevents errors when building with Java 17 but classes were compiled with Java 21
+        JavaVersion.current().isCompatibleWith(JavaVersion.VERSION_21)
+    }
 }
 
 artifacts {
