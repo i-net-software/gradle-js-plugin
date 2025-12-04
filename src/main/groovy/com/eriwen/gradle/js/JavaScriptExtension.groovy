@@ -22,8 +22,8 @@ class JavaScriptExtension {
     }
 
     void source(Closure closure) {
-        closure.delegate = source
-        closure.resolveStrategy = Closure.DELEGATE_FIRST
-        closure.call(source)
+        // Configure the container - use the container's configure method directly
+        // This allows dynamic method calls like custom { } to work
+        source.configure(closure)
     }
 }

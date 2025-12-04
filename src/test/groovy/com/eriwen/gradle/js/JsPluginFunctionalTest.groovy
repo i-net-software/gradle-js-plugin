@@ -8,9 +8,21 @@ class JsPluginFunctionalTest extends FunctionalSpec {
     def "basic processing chain"() {
         given:
         buildFile << """
+            import org.gradle.api.tasks.util.internal.PatternSetFactory
+            
             class TestTask extends SourceTask {
                 @OutputDirectory
                 File destination
+                
+                private PatternSetFactory _patternSetFactory
+                
+                @Override
+                protected PatternSetFactory getPatternSetFactory() {
+                    if (_patternSetFactory == null) {
+                        _patternSetFactory = project.services.get(PatternSetFactory.class)
+                    }
+                    return _patternSetFactory
+                }
 
                 @TaskAction
                 void doit() {

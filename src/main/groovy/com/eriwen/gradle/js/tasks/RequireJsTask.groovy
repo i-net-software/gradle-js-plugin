@@ -24,6 +24,7 @@ import org.gradle.api.tasks.SourceTask
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.util.internal.PatternSetFactory
 import org.gradle.process.JavaExecSpec
+import org.gradle.api.tasks.JavaExec
 
 class RequireJsTask extends SourceTask {
     private PatternSetFactory _patternSetFactory
@@ -88,15 +89,48 @@ class RequireJsTask extends SourceTask {
 
         // Execute RequireJS using Rhino via JavaExec
         try {
-            project.javaexec { JavaExecSpec spec ->
-                spec.classpath = project.configurations.rhino
-                spec.main = 'org.mozilla.javascript.tools.shell.Main'
-                spec.args = args
-                spec.workingDir = project.projectDir
-                if (rhinoMaxHeapSize) {
-                    spec.maxHeapSize = rhinoMaxHeapSize
+            // Use project.javaexec if available, otherwise create JavaExec task directly
+            try {
+                project.javaexec { JavaExecSpec spec ->
+                    spec.classpath = project.configurations.rhino
+                    spec.main = 'org.mozilla.javascript.tools.shell.Main'
+                    spec.args = args
+                    spec.workingDir = project.projectDir
+                    if (rhinoMaxHeapSize) {
+                        spec.maxHeapSize = rhinoMaxHeapSize
+                    }
+                    spec.ignoreExitValue = ignoreExitCode
                 }
-                spec.ignoreExitValue = ignoreExitCode
+            } catch (MissingMethodException e) {
+                // Fallback: use ProcessBuilder for test contexts where javaexec is not available
+                def javaHome = System.getProperty('java.home')
+                def javaExec = new File(javaHome, 'bin/java').absolutePath
+                def classpathString = project.configurations.rhino.files.collect { it.absolutePath }.join(System.getProperty('path.separator'))
+                
+                def command = [javaExec, '-cp', classpathString, 'org.mozilla.javascript.tools.shell.Main'] as List<String>
+                command.addAll(args.collect { it.toString() })
+                def processBuilder = new ProcessBuilder(command)
+                processBuilder.directory(project.projectDir)
+                if (rhinoMaxHeapSize) {
+                    def env = processBuilder.environment()
+                    env.put('JAVA_OPTS', "-Xmx${rhinoMaxHeapSize}")
+                }
+                
+                def process = processBuilder.start()
+                // Consume output streams to prevent process from hanging
+                def outputThread = Thread.start {
+                    process.inputStream.eachLine { line -> logger.debug(line) }
+                }
+                def errorThread = Thread.start {
+                    process.errorStream.eachLine { line -> logger.error(line) }
+                }
+                def exitCode = process.waitFor()
+                outputThread.join()
+                errorThread.join()
+                
+                if (exitCode != 0 && !ignoreExitCode) {
+                    throw new org.gradle.process.internal.ExecException("RequireJS execution failed with exit code ${exitCode}")
+                }
             }
         } catch (org.gradle.process.internal.ExecException e) {
             if (!ignoreExitCode) {
