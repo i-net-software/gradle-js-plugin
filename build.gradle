@@ -10,9 +10,10 @@ apply plugin: 'maven-publish'
 apply plugin: 'java'
 
 java {
-    // Use Java 21 as primary version for newer Closure Compiler support
-    sourceCompatibility = JavaVersion.VERSION_21
-    targetCompatibility = JavaVersion.VERSION_21
+    // Compile with Java 21 toolchain for newer Closure Compiler support
+    // But target Java 17 bytecode so the plugin can run on Java 17+
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
     toolchain {
         languageVersion = JavaLanguageVersion.of(21)
     }
@@ -115,8 +116,9 @@ groovydoc {
     }
 }
 
-artifacts {
-    archives groovydocJar, sourceJar
+// Artifacts are now added directly to the assemble task instead of using the deprecated archives configuration
+tasks.named('assemble').configure {
+    dependsOn groovydocJar, sourceJar
 }
 
 publishing {

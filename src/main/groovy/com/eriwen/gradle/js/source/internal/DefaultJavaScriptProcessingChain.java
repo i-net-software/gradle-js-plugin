@@ -16,11 +16,20 @@ import org.gradle.api.Namer;
 import java.util.Collections;
 import java.util.concurrent.Callable;
 
+/**
+ * Default implementation of a JavaScript processing chain.
+ */
 public class DefaultJavaScriptProcessingChain extends DefaultNamedDomainObjectList<SourceTask> implements JavaScriptProcessingChain {
 
     private final DefaultJavaScriptSourceSet source;
     private final Project project;
 
+    /**
+     * Creates a new JavaScript processing chain.
+     * @param project the Gradle project
+     * @param source the JavaScript source set
+     * @param instantiator the instantiator for creating tasks
+     */
     public DefaultJavaScriptProcessingChain(Project project, DefaultJavaScriptSourceSet source, Instantiator instantiator) {
         super(SourceTask.class, instantiator, (Namer<SourceTask>) SourceTask::getName, CollectionCallbackActionDecorator.NOOP);
         this.source = source;
@@ -28,10 +37,16 @@ public class DefaultJavaScriptProcessingChain extends DefaultNamedDomainObjectLi
         wireChain();
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public JavaScriptSourceSet getSource() {
         return source;
     }
 
+    /**
+     * Wires the processing chain so that each task's source is the output of the previous task.
+     */
     protected void wireChain() {
         all(new Action<SourceTask>() {
             public void execute(final SourceTask sourceTask) {
@@ -66,16 +81,22 @@ public class DefaultJavaScriptProcessingChain extends DefaultNamedDomainObjectLi
 
     @SuppressWarnings("unchecked")
     public <T extends SourceTask> T task(String name, Class<T> type, Closure closure) {
-        T task = project.getTasks().create(name, type);
-        if (closure != null) {
-            closure.setDelegate(task);
-            closure.setResolveStrategy(Closure.DELEGATE_FIRST);
-            closure.call(task);
-        }
+        T task = project.getTasks().register(name, type, t -> {
+            if (closure != null) {
+                closure.setDelegate(t);
+                closure.setResolveStrategy(Closure.DELEGATE_FIRST);
+                closure.call(t);
+            }
+        }).get();
         add(task);
         return task;
     }
     
+    /**
+     * Calculates a task name based on the task type.
+     * @param type the task class
+     * @return the calculated task name
+     */
     protected String calculateName(Class<? extends SourceTask> type) {
         String name = type.getName();
         if (name.endsWith("Task")) {

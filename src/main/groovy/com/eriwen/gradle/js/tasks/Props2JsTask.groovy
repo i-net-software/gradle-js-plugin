@@ -21,6 +21,8 @@ import org.gradle.api.tasks.SourceTask
 import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.util.internal.PatternSetFactory
+import org.gradle.process.ExecOperations
+import org.gradle.process.JavaExecSpec
 
 class Props2JsTask extends SourceTask {
     private PatternSetFactory _patternSetFactory
@@ -62,14 +64,14 @@ class Props2JsTask extends SourceTask {
         }
 
         final File props2JsJar = RESOURCE_UTIL.extractFileToDirectory(new File(project.buildDir, TMP_DIR), PROPS2JS_JAR)
-        final List<String> props2JsArgs = [props2JsJar.canonicalPath, (source.files.toArray() as File[])[0].canonicalPath, '-t', type]
+        final List<String> props2JsArgs = ['-jar', props2JsJar.canonicalPath, (source.files.toArray() as File[])[0].canonicalPath, '-t', type]
         if (functionName) {
             props2JsArgs.addAll(['--name', functionName])
         }
         props2JsArgs.addAll(['-o', (dest as File).canonicalPath])
-        project.javaexec {
-            main = '-jar'
-            args = props2JsArgs
+        def execOps = project.services.get(ExecOperations)
+        execOps.javaexec { JavaExecSpec spec ->
+            spec.args = props2JsArgs
         }
     }
 }

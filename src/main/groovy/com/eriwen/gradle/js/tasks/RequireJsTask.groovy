@@ -24,6 +24,7 @@ import org.gradle.api.tasks.SourceTask
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.util.internal.PatternSetFactory
 import org.gradle.process.JavaExecSpec
+import org.gradle.process.ExecOperations
 import org.gradle.api.tasks.JavaExec
 
 class RequireJsTask extends SourceTask {
@@ -91,9 +92,10 @@ class RequireJsTask extends SourceTask {
         try {
             // Use project.javaexec if available, otherwise create JavaExec task directly
             try {
-                project.javaexec { JavaExecSpec spec ->
+                def execOps = project.services.get(ExecOperations)
+                execOps.javaexec { JavaExecSpec spec ->
                     spec.classpath = project.configurations.rhino
-                    spec.main = 'org.mozilla.javascript.tools.shell.Main'
+                    spec.mainClass = 'org.mozilla.javascript.tools.shell.Main'
                     spec.args = args
                     spec.workingDir = project.projectDir
                     if (rhinoMaxHeapSize) {

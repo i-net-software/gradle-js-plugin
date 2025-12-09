@@ -22,6 +22,7 @@ import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.util.internal.PatternSetFactory
 import org.gradle.process.JavaExecSpec
+import org.gradle.process.ExecOperations
 
 class JsDocTask extends SourceTask {
     private PatternSetFactory _patternSetFactory
@@ -65,10 +66,11 @@ class JsDocTask extends SourceTask {
         args.addAll(['-d', (destinationDir as File).absolutePath])
         args.addAll(project.jsdoc.options.collect { it })
 
-        project.javaexec { JavaExecSpec spec ->
+        def execOps = project.services.get(ExecOperations)
+        execOps.javaexec { JavaExecSpec spec ->
             spec.classpath = project.files("${workingDir}${File.separator}rhino${File.separator}js.jar")
             spec.workingDir = new File(workingDir)
-            spec.main = 'org.mozilla.javascript.tools.shell.Main'
+            spec.mainClass = 'org.mozilla.javascript.tools.shell.Main'
             spec.args = args
         }
     }
