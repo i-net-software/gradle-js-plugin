@@ -207,6 +207,12 @@ afterEvaluate {
         }
     }
     
+    // Ensure metadata generation depends on artifact tasks
+    tasks.named('generateMetadataFileForPluginMavenPublication').configure {
+        dependsOn sourceJar
+        dependsOn groovydocJar
+    }
+    
     publishing.publications.all {
         if (it instanceof MavenPublication) {
             it.pom {
