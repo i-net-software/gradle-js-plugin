@@ -59,7 +59,12 @@ jobs:
       
       - name: Update version in gradle.properties
         run: |
-          sed -i "s/^version = .*/version = ${{ steps.version.outputs.version }}/" gradle.properties
+          # Create gradle.properties if it doesn't exist
+          if [ ! -f gradle.properties ]; then
+            echo "version = ${{ steps.version.outputs.version }}" > gradle.properties
+          else
+            sed -i "s/^version = .*/version = ${{ steps.version.outputs.version }}/" gradle.properties
+          fi
           cat gradle.properties
       
       - name: Extract changelog for version
